@@ -1,0 +1,536 @@
+---
+title: R Notebook for Probability and statistical Inference CA Part I 
+output: html_notebook
+author: D18128839, Ashutosh Kumar Singh - TU059
+---
+# Abstract
+
+Analysing the data can get sometimes teadious unless you know the right approach to follow.This is when Statistical analysis of the dataset comes to our rescue.It is the very basis of doing predctive analysis which can give deeper insights.For this assignment we are using the dataset which can be downloaded from UCI Machine Learning Repository (https://archive.ics.uci.edu/ml/datasets/student+performance). It is related with analysing the factors affecting the student's performance in the secondary school.Here, I am conducting some of the hypothesis tests to check the relation between the variables.
+
+Below are the libraries which have been used to conduct the different tests.
+```{r setup}
+#Code chunk for setup
+library(ggplot2)  #For creating histograms with more detail than plot
+library(pastecs)  #For creating descriptive statistic summaries
+library(psych)    #Some useful descriptive functions,analyzing data with 
+library(semTools) #For skewness and kurtosis
+library(car)      #For Levene's test for homogeneity of variance
+library(userfriendlyscience)  #For doing Anova with nice summary output
+library(FSA)     #For postHoc Test   
+library(stats)   #For statistical analytical functions
+
+#Reading the data
+students <- read.csv('studentsrenamed.csv')
+colnames(students) <- tolower(colnames(students))
+
+```
+# 1. Introduction
+## 1.1 Background 
+We need to perform Hypothesis testing on different variables including the different concepts which can be useful in giving the most accurate and relevant results.As we know, there are certain factors which can affect the student's performance.My analysis starts with choosing the appropriate variable and inspecting for its normality.I am interested in checking for the correlation between the selected variables, observing the difference between one parametric and one categorical variable with two and more than two groups, looking for the differences in performance at two different time intervals.All these tests are useful in giving the clear overview of how one variable can affect the other.
+
+## 1.2 Dataset description
+
+The dataset includes various variables which can impact the student's performance.The main variables which i have chosen for my hypothesis testing are mentioned below :    
+1. final grade in Maths(mg3)  
+2. final grade in Portuguese(pg3)  
+3. final grade of students in Maths(mg3)  
+4. number of school absences in Maths(absences.m)  
+5. final Portuguese grades(pg3)    
+6. Gender   
+7. Final Maths grade(mg3)   
+8. Travel time for maths(traveltime.m)  
+9. Portuguese grade at period 1(pg1)  
+10.Portuguese grade at period 2(pg2)  
+
+Before conducting any test, we need to check for the normality of chosen parametric variables and based on the results we need to proceed with our tests.
+
+Checking the Normality of Variables used in all the Hypothesis Testing : 
+
+## Inspect Final Maths Grade(mg3):
+```{r datadesc1}
+#Code chunks for data descriptions
+#numerical summary and histograms of Final Maths Grade
+#stat.desc is a function from pastecs 
+pastecs::stat.desc(students$mg3, basic=F)
+```
+
+```{r}
+#skewness and kurtosis from semTools with standard error
+tpskew<-semTools::skew(students$mg3)
+tpkurt<-semTools::kurtosis(students$mg3)
+```
+
+```{r}
+#We divide the skew statistic by the standard error to get the standardised score
+tpskew[1]/tpskew[2]
+tpkurt[1]/tpkurt[2]
+```
+
+## Graph Final Maths Grade(mg3):
+```{r}
+#We will allocate the histogram to a variable to allow use to manipulate it
+gg <- ggplot(students, aes(x=students$mg3))
+
+#Change the label of the x axis
+gg <- gg + labs(x="Final Maths Grade")
+#manage binwidth and colours
+gg <- gg + geom_histogram(binwidth=2, colour="black", aes(y=..density.., fill=..count..))
+gg <- gg + scale_fill_gradient("Count", low="#DCDCDC", high="#7C7C7C")
+#adding a normal curve
+#use stat_function to compute a normalised score for each value of tpcois
+#pass the mean and standard deviation
+#use the na.rm parameter to say how missing values are handled
+gg <- gg + stat_function(fun=dnorm, color="red",args=list(mean=mean(students$mg3, na.rm=TRUE), sd=sd(students$mg3, na.rm=TRUE)))
+#to display the graph request the contents of the variable be shown
+gg
+```
+
+From histogram, we can check the spacing which is symmetric and similar on both the sides, this represents normal distribution.
+
+```{r}
+#Create a qqplot
+qqnorm(students$mg3)
+qqline(students$mg3, col=2) #show a line on theplot
+```
+
+Most of the dots are evenly distributed across the line. The dots here represent the magnitude and direction of deviation.
+
+```{r}
+#Create standardised scores and sort
+sort(scale(students$mg3))
+```
+
+Since all the values of the standardised score is under the range +3.29 and -3.29, we can easily conclude our data is normally distributed.
+
+
+## Inspect Final Portuguese Grade(pg3):
+```{r datadesc2}
+#Code chunks for data descriptions
+#numerical summary and histograms of Final Maths Grade
+#stat.desc is a function from pastecs 
+pastecs::stat.desc(students$pg3, basic=F)
+```
+
+```{r}
+#skewness and kurtosis from semTools with standard error
+tpskew<-semTools::skew(students$pg3)
+tpkurt<-semTools::kurtosis(students$pg3)
+```
+
+```{r}
+#We divide the skew statistic by the standard error to get the standardised score
+tpskew[1]/tpskew[2]
+tpkurt[1]/tpkurt[2]
+```
+
+## Graph Final Portuguese Grade(pg3):
+```{r}
+#We will allocate the histogram to a variable to allow use to manipulate it
+gg <- ggplot(students, aes(x=students$pg3))
+
+#Change the label of the x axis
+gg <- gg + labs(x="Final Portuguese Grade")
+#manage binwidth and colours
+gg <- gg + geom_histogram(binwidth=2, colour="black", aes(y=..density.., fill=..count..))
+gg <- gg + scale_fill_gradient("Count", low="#DCDCDC", high="#7C7C7C")
+#adding a normal curve
+#use stat_function to compute a normalised score for each value of tpcois
+#pass the mean and standard deviation
+#use the na.rm parameter to say how missing values are handled
+gg <- gg + stat_function(fun=dnorm, color="red",args=list(mean=mean(students$pg3, na.rm=TRUE), sd=sd(students$pg3, na.rm=TRUE)))
+#to display the graph request the contents of the variable be shown
+gg
+```
+
+Through red line across the histogram,we can say the data is not symmetric and negatively skewed.
+
+```{r}
+#Create a qqplot
+qqnorm(students$pg3)
+qqline(students$pg3, col=2) #show a line on theplot
+```
+
+The dots are widely spread across the red line which represents skewed distribution.
+
+```{r}
+#Create standardised scores and sort
+sort(scale(students$pg3))
+```
+
+Though we have few values in the standardised score more than the range +3.25 and -3.25 yet we have more than 95% of the data which falls under the specified range.Hence we can conclude that data(pg3) is approaching normality.
+
+
+## Inspect School Absences in Maths(absences.m)
+```{r}
+pastecs::stat.desc(students$absences.m, basic=F)
+```
+
+```{r}
+#skewness and kurtosis from semTools with standard error
+tpskew<-semTools::skew(students$absences.m)
+tpkurt<-semTools::kurtosis(students$absences.m)
+```
+
+```{r}
+#We divide the skew statistic by the standard error to get the standardised score
+tpskew[1]/tpskew[2]
+tpkurt[1]/tpkurt[2]
+```
+
+## GRAPH absences.m
+```{r}
+#We will allocate the histogram to a variable to allow use to manipulate it
+gg <- ggplot(students, aes(x=students$absences.m))
+
+#Change the label of the x axis
+gg <- gg + labs(x="Students absences")
+#manage binwidth and colours
+gg <- gg + geom_histogram(binwidth=2, colour="black", aes(y=..density.., fill=..count..))
+gg <- gg + scale_fill_gradient("Count", low="#DCDCDC", high="#7C7C7C")
+#adding a normal curve
+#use stat_function to compute a normalised score for each value of tpcois
+#pass the mean and standard deviation
+#use the na.rm parameter to say how missing values are handled
+gg <- gg + stat_function(fun=dnorm, color="red",args=list(mean=mean(students$absences.m, na.rm=TRUE), sd=sd(students$pg3, na.rm=TRUE)))
+#to display the graph request the contents of the variable be shown
+gg
+```
+
+Through red line across the histogram,we can say the data is not symmetric and positively skewed.
+
+```{r}
+#Create a qqplot
+qqnorm(students$absences.m)
+qqline(students$absences.m, col=2) #show a line on theplot
+```
+It is the plot between expected and observed z-score.Most of the dots are scattered and not in the direction of red line, the data is skewed.
+
+
+```{r}
+#Sort the standardised scores 
+sort(scale(students$absences.m))
+
+```
+
+We have certain values in the standardised score more than the range +3.25 but still we have more than 95% of the data falling under the specified range.Thus, we can conclude that data(absences.m) is normal.
+
+## Inspect Portuguese Grade at Period1(pg1)
+```{r}
+pastecs::stat.desc(students$pg1, basic=F)
+```
+
+```{r}
+tpskew<-semTools::skew(students$pg1)
+tpkurt<-semTools::kurtosis(students$pg1)
+```
+
+```{r}
+#We divide the skew statistic by the standard error to get the standardised score
+tpskew[1]/tpskew[2]
+tpkurt[1]/tpkurt[2]
+```
+## Graph Portuguese Grade at Period1(pg1)
+```{r}
+#We will allocate the histogram to a variable to allow use to manipulate it
+gg <- ggplot(students, aes(x=students$pg1))
+
+#Change the label of the x axis
+gg <- gg + labs(x="Potuguese Grade at Period 1")
+#manage binwidth and colours
+gg <- gg + geom_histogram(binwidth=2, colour="black", aes(y=..density.., fill=..count..))
+gg <- gg + scale_fill_gradient("Count", low="#DCDCDC", high="#7C7C7C")
+#adding a normal curve
+#use stat_function to compute a normalised score for each value of tpcois
+#pass the mean and standard deviation
+#use the na.rm parameter to say how missing values are handled
+gg <- gg + stat_function(fun=dnorm, color="red",args=list(mean=mean(students$pg1, na.rm=TRUE), sd=sd(students$pg1, na.rm=TRUE)))
+#to display the graph request the contents of the variable be shown
+gg
+```
+
+The red line represents almost the symmetry between the values of pg1 ,it can be considered normal with slightly skewed.
+
+```{r}
+#Create a qqplot
+qqnorm(students$pg1)
+qqline(students$pg1, col=2) #show a line on theplot
+```
+
+It is the plot between expected and observed z-score.Some of the dots are evenly ditributed above and below the red line which usually represents normality.
+But to confirm, we will proceed with the findings of the standardised scores. 
+
+```{r}
+#Sort the standardised scores 
+sort(scale(students$pg1))
+```
+
+Except for the one value everything falls under +3.25 and -3.25 range, we can easily say our data(pg1) is normally distributed.
+
+## Inspect Portuguese Grade at Period2(pg2)
+```{r}
+pastecs::stat.desc(students$pg2, basic=F)
+```
+
+```{r}
+tpskew<-semTools::skew(students$pg2)
+tpkurt<-semTools::kurtosis(students$pg2)
+```
+
+
+```{r}
+#We divide the skew statistic by the standard error to get the standardised score
+tpskew[1]/tpskew[2]
+tpkurt[1]/tpkurt[2]
+```
+
+## Graph Portuguese Grade at Period2(pg2)
+```{r}
+#We will allocate the histogram to a variable to allow use to manipulate it
+gg <- ggplot(students, aes(x=students$pg2))
+
+#Change the label of the x axis
+gg <- gg + labs(x="Potuguese Grade at Period 2")
+#manage binwidth and colours
+gg <- gg + geom_histogram(binwidth=2, colour="black", aes(y=..density.., fill=..count..))
+gg <- gg + scale_fill_gradient("Count", low="#DCDCDC", high="#7C7C7C")
+#adding a normal curve
+#use stat_function to compute a normalised score for each value of tpcois
+#pass the mean and standard deviation
+#use the na.rm parameter to say how missing values are handled
+gg <- gg + stat_function(fun=dnorm, color="red",args=list(mean=mean(students$pg2, na.rm=TRUE), sd=sd(students$pg2, na.rm=TRUE)))
+#to display the graph request the contents of the variable be shown
+gg
+```
+
+The histogram of pg2 represents the symmetry we therefore can conclude our data is normally distributed.
+
+
+```{r}
+#Create a qqplot
+qqnorm(students$pg2)
+qqline(students$pg2, col=2) #show a line on theplot
+```
+
+It is the plot between expected and observed z-score.All the values are expected to be on the red line for data to be normal.In this case, we can say that the data is normal.
+
+```{r}
+#Sort the standardised scores 
+sort(scale(students$pg2))
+```
+
+All the values of the standardised score falls under the range of +3.25 and -3.25, we can conclude that pg2 is normal.
+
+
+## 1.3 Hypotheses
+
+To explore the various variables and applicable concepts on the same, below are the hypotheses i have considered :
+
+Test 1: It involves correlation
+
+H0 : There is no relationship between final grade in Maths(mg3) and final grade in Portuguese(pg3).  
+Ha : There is a relationship between final maths grade and Portuguese grade.
+
+Test 2: It also involves correlation
+
+H0 : There is no relationship between final grade of students in Maths(mg3) and number of school absences in Maths(absences.m).  
+Ha : There exists a relationship between final maths grade and number of school absences in Maths.
+
+Test 3 : Difference which involves a categorical variable(sex) with 2 values.
+
+H0 : Means of final Portuguese grades for male and female are equal.   
+Ha : Means of final Portuguese grades for both the category are not equal.  
+
+Test 4 : Difference which involves a categorical variable(travel time) with 4 values.
+
+H0 : Means of final Maths grades for all categories under travel time are equal.  
+Ha : Means of final Maths grades for all categories under travel time are not equal.  
+
+Test 5 : Difference using Paired sample t-Test
+
+H0 : Means of Portuguese grades remain same at different time intervals.  
+Ha : Means of Portuguese grades vary at different time intervals.  
+
+
+## 2.1 Hypothesis 1 - Correlation between student's marks in Maths and student's marks in Portuguese
+
+Our Null hypothesis is there is no relationship between final grade in Maths(mg3) and final grade in Portuguese(pg3). And our alternate hypothesis is believed that there exists a relationship between final maths grade and Portuguese grade.
+
+Pearson Correlation Test was conducted to show the relation between the variables and test the Hypothesis.
+
+## Reason for choosing this test: 
+It is already proved in section 1.2 that both the variables mg3 and pg3 are normally distributed and are eligible for two tailed test.Thus,it makes sense to use Pearson Test to show the correlation and conduct our Hypothesis test.
+  
+```{r hypo1}
+#Code chunk for hypothesis 1
+#### Scatterplot
+
+#Simple scatterplot of Final Maths Grade and Final Potuguese Grade
+#aes(x,y)
+scatter <- ggplot(students, aes(students$mg3, students$pg3))
+scatter + geom_point() + labs(x = "Final Maths Grade", y = "Final Portuguese Grade") 
+
+#Add a regression line
+scatter + geom_point() + geom_smooth(method = "lm", colour = "Red", se = F) + labs(x = "Final Maths Grade", y = "Final Portuguese Grade")
+```
+
+The regression line on the scatterplot represents the better view of the variables if they are correlated.With above one between mg3 and pg3, we can say there is a moderate level of correlation between them.
+
+```{r}
+#### Conducting Correlation Test
+stats::cor.test(students$mg3, students$pg3, method='pearson')
+```
+
+The relationship between final grade in Maths(mg3) and final grade in Portuguese(pg3) was investigted using Pearson Correlation test. The moderate level of correlation was found(t= 10.67, n = 380, p < 0.01). The p-value is significantly lower than the standard p-value. Hence, we have enough evidence to reject our null hypothesis in favour of alternate hypothesis and there do exist relationship between final Maths grade (mg3) and Portuguese grade(pg3).
+
+
+## 2.2 Hypothesis 2 - Correlation between student's marks in Maths and number of school absences in Maths
+
+Our Null hypothesis is there is no relationship between final grade of students in Maths(mg3) and number of school absences in Maths(absences.m). And our alternate hypothesis is believed that there exists a relationship between final maths grade and number of school absences in Maths.
+
+Pearson Correlation Test was used to show the relation between the variables and test the Hypothesis.
+
+## Reason for choosing this test: 
+It is shown in section 1.2 , even though the variable absences.m was negatively skewed but after taking the standardised scores we concluded that the data is normally distributed and mg3 we have already considered normal for our previous test.Thus,it will be ideal to use Pearson Test to show the correlation and conduct our Hypothesis test.
+
+```{r hypo2}
+#Code chunk for hypothesis 2
+#### Scatterplot
+
+#Simple scatterplot of Final Maths Grade and Students Absences
+#aes(x,y)
+scatter <- ggplot(students, aes(students$mg3, students$absences.m))
+scatter + geom_point() + labs(x = "Final Maths Grade", y = "Students absences") 
+
+#Add a regression line
+scatter + geom_point() + geom_smooth(method = "lm", colour = "Red", se = F) + labs(x = "Final Maths Grade", y = "Students absences")
+```
+
+Through this scatterplot, we can say there is a very weak  correlation between the variables mg3 and absences.m.
+
+
+```{r}
+#### Conducting Correlation Test
+stats::cor.test(students$mg3, students$absences.m, method='pearson')
+```
+
+The relationship between final grade in Maths(mg3) and number of school absences in Maths(absences.m) was investigted using Pearson Correlation test.Very weak correlation was found(t= 0.5653, n = 380, p = 0.57).Also,p-value is higher than the standard p-value. Hence, we have no evidence to reject our Null hypothesis that says there is no relationship between final grade of students in Maths(mg3) and number of school absences in Maths(absences.m).
+
+
+## 2.3 Hypothesis 3 - Difference in means of final Portuguese grade for female and male category
+
+Our Null hypothesis is means of final Portuguese grades for male and female are equal while our Alternate hypothesis is assumed that the means of final Portuguese grades for both the category are not equal.
+
+An independent sample t-test was conducted after checking the sample distribution and homogeneity of variance.
+
+## Reason for choosing this test:
+Final Portuguese grade(pg3) is normally distributed and Gender is the categorical variable with two groups Female and Male.Even though the variances are not equal but the samples in each group are nearly same(F=198,M=184).Hence,t-test will be ideal to test our hypothesis with the kind of robustness it provides.
+
+```{r hypo3}
+#Code chunk for hypothesis 3
+#Get descriptive stastitics by group
+#describeBy is part of the psych package so you need to use it
+
+psych::describeBy(students$pg3,group=students$sex)
+
+#Conduct Levene's test for homogeneity of variance in library car
+
+car::leveneTest(pg3~students$sex, data=students)
+
+#Resulting p-value under 0.05 means that variances are not equal 
+#Test is significant so we can't assume homogeneity of variance
+
+#Conducting the t-test
+t.test(pg3~students$sex, data=students)
+```
+Calculating effect size :
+eta squared helps to figure out the magnitude of the difference between means of the groups.
+```{r}
+#Calculating effect size - eta squared
+t=3.963
+etaSquared <- t^2/(t^2+(382-2))
+etaSquared
+```
+
+An independent-samples t-test was conducted to compare final portuguese grades for female and male students.Significant difference in the final portuguese scores for female and male was found (M=13.08, SD= 2.5 for "Female" group, M= 11.90, SD= 3.26 for "Male" group),(t(380)= 3.963, p = 9.01e-05) with the p value lower than the standard value.The eta square statistic also indicated a moderate effect size (0.03).Hence, we have enough evidence to reject our Null hypothesis which says there is no difference between means of final Portuguese grades for male and female.
+
+
+## 2.4 Hypothesis 4 - Difference between means of final maths grade for all the categories of home to school travel time for maths
+
+Our Null hypothesis is means of final Maths grades for all categories under travel time are equal while our Alternate hypothesis is believed that the means of final Maths grades for all categories under travel time are not equal.
+
+ANOVA test was conducted to decide if means are different based on the variation within the groups.
+
+## Reason for choosing this test:
+Final Maths grade(mg3) is continuous variable with normal distribution and home to school Travel time for maths(traveltime.m) is categorical variable with four different groups.With Bartlett test, we also concluded variance is homogeneous.Hence,proceeding with the ANOVA test would be better approach to conduct our Hypothesis test.
+
+```{r hypo4}
+#Code chunk for hypothesis 4
+#Check for homogeneity of variance
+#We use Bartlett's test 
+
+stats::bartlett.test(students$mg3, students$traveltime.m)
+
+#Converting the integer type of travel time to factors
+students[,'traveltime.m']<-factor(students[,'traveltime.m'])
+class(students$traveltime.m)
+
+###ANOVA
+#Can be argued that the variances are homogeneous if the p-value > 0.05
+#Basic Approach
+#Compute the analysis of variance
+res.aov <- stats::aov(students$mg3 ~ students$traveltime.m, data = students)
+#Summary of the analysis
+summary(res.aov)
+#Tukey pairwise comparison
+stats::TukeyHSD(res.aov)
+```
+Calculating the Effect Size :
+eta squared=sum of squares between groups/total sum of squares (from our ANOVA output)
+
+```{r}
+#Calculating effect size
+etaSquared <- 136/8234
+etaSquared
+```
+
+A one-way between-groups analysis of variance was conducted to explore the impact of different travelling time from home to school on the final Maths grade.There was no significant difference at all levels of travel time : F(3,378) = 2.08 ,p > 0.05.Also ,the actual difference in mean scores between groups is also not significant. The effect size, calculated using eta squared was .01. Post-hoc comparisons using the Tukey HSD test indicated that the mean score for none of the groups were significant.Thus, we have no evidence to reject our Null hypothesis which states means of final Maths grades for all categories under travel time are equal.
+
+## 2.5 Hypothesis 5 - Difference between mean scores of Portuguese grade in two  different time periods
+
+Our Null hypothesis is means of Portuguese grades remain same even at different time intervals while our Alternate hypothesis is assumed that means of Portuguese grades varies with change in time period.
+
+Paired Sample t-Test was conducted to compare the means in two different time zones.
+
+## Reason for choosing this test:
+As shown in section 1.2,Portuguese grade at different time levels - pg1 and pg2 are normally distributed.Since we need to compare the mean of Portuguese grades for two different time periods, paired sample t-test will be ideal to test our hypothesis.
+
+```{r hypo5}
+#Code chunk for hypothesis 5
+summary(students$pg1)
+summary(students$pg2)
+t.test(students$pg1,students$pg2,paired = TRUE)
+```
+Calculating effect size : eta squared
+This shows there is no significant difference in the means of their marks for pg1 and pg2.
+```{r}
+#Calculating effect size
+t=-2.05
+n1=381
+eta <- (t^2)/((t^2)+(n1))
+eta
+```
+
+A paired-sample t-test was conducted to evaluate the impact on students’ portuguese grades in two different time periods.There was statistically significant increase in Mean grades of Portuguese from Time 1 (M=12.11) to Time 2 (M=12.24), t (381)=-2.05, p=0.04).The differences of the mean is -0.12.The eta squared statistic (.01) indicated a very small effect size.Hence, we have enough evidence to reject our Null hypothesis which states means of Portuguese grades remain same even at different time intervals.
+
+# 3. Discussion
+
+From the first hypothesis testing, i tried finding relationship between final grade in Maths(mg3) and final grade in Portuguese(pg3).With the conducted test, i can conclude that both the variables are positively correlated and can be proved important variables when it comes to the predictive analysis of the dataset.The second hypothesis testing between final grade in Maths(mg3) and number of school absences in Maths(absences.m) proved that there is no relationship between these variables and can not be used together for any significant tests.
+
+The third test conducted to compare final portuguese grades for female and male students showed that gender does impact final portuguese grades. Both are dependent variables and can be used together for inference in concrete findings.
+Through fourth test, we can conclude that students' final maths grades under different travel times are also independent variables and do not impact each other.
+
+The fifth hypothesis test was done to check for the final portuguese grade at different levels of time. From the results, we can conclude that final portuguese grades can vary at different time levels.This shows that students score might increase or decrease based on the time-period when the test was conducted. The variables mg3, pg3, gender can be proved of more significance when it comes to the exploratory analysis of the dataset.
+
+# References
+
+P. Cortez and A. Silva. Using Data Mining to Predict Secondary School Student Performance. In A. Brito and J. Teixeira Eds., Proceedings of 5th FUture BUsiness TEChnology Conference (FUBUTEC 2008) pp. 5-12, Porto, Portugal, April, 2008, EUROSIS, ISBN 978-9077381-39-7. 

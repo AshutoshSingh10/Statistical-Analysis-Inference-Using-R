@@ -1,0 +1,689 @@
+---
+title: "R Notebook for Probability and statistical Inference CA Part II"
+output: html_notebook
+author: D18128839, Ashutosh Kumar Singh - TU059
+---
+
+## FACTORS AFFECTING STUDENT'S PERFORMANCE IN SECONDARY SCHOOLS
+
+## Libraries
+
+```{r}
+library(ggplot2)  #For creating histograms with more detail than plot
+library(pastecs)  #For creating descriptive statistic summaries
+library(psych)    #Some useful descriptive functions,analyzing data with 
+library(semTools) #For skewness and kurtosis
+library(car)      #For Levene's test for homogeneity of variance
+library(userfriendlyscience)  #For doing Anova with nice summary output
+library(FSA)     #For postHoc Test   
+library(stats)   #For statistical analytical functions
+library(lmSupport)#Extra functions for linear model (may require install of nloptr also)
+library(lm.beta)
+library(stargazer)#pretty print regression output
+library(dplyr)
+library(generalhoslem)
+
+#Reading the data
+students <- read.csv('studentsrenamed.csv')
+colnames(students) <- tolower(colnames(students))
+```
+
+## Descriptive Analysis Of Variables
+
+
+```{r}
+allmissing <- is.na(students)
+counts <- colSums(allmissing)
+View(counts)
+```
+
+
+## Inspect Final Maths Grade(mg3):
+```{r datadesc1}
+#Code chunks for data descriptions
+#numerical summary and histograms of Final Maths Grade
+#stat.desc is a function from pastecs 
+pastecs::stat.desc(students$mg3, basic=F)
+```
+
+```{r}
+#skewness and kurtosis from semTools with standard error
+tpskew<-semTools::skew(students$mg3)
+tpkurt<-semTools::kurtosis(students$mg3)
+```
+
+```{r}
+#We divide the skew statistic by the standard error to get the standardised score
+tpskew[1]/tpskew[2]
+tpkurt[1]/tpkurt[2]
+```
+
+## Graph Final Maths Grade(mg3):
+```{r}
+#We will allocate the histogram to a variable to allow use to manipulate it
+gg <- ggplot(students, aes(x=students$mg3))
+
+#Change the label of the x axis
+gg <- gg + labs(x="Final Maths Grade")
+#manage binwidth and colours
+gg <- gg + geom_histogram(binwidth=2, colour="black", aes(y=..density.., fill=..count..))
+gg <- gg + scale_fill_gradient("Count", low="#DCDCDC", high="#7C7C7C")
+#adding a normal curve
+#use stat_function to compute a normalised score for each value of tpcois
+#pass the mean and standard deviation
+#use the na.rm parameter to say how missing values are handled
+gg <- gg + stat_function(fun=dnorm, color="red",args=list(mean=mean(students$mg3, na.rm=TRUE), sd=sd(students$mg3, na.rm=TRUE)))
+#to display the graph request the contents of the variable be shown
+gg
+```
+
+
+From histogram, we can check the spacing which is symmetric and similar on both the sides, this represents normal distribution.
+
+```{r}
+#Create a qqplot
+qqnorm(students$mg3)
+qqline(students$mg3, col=2) #show a line on theplot
+```
+
+
+Most of the dots are evenly distributed across the line. The dots here represent the magnitude and direction of deviation.
+
+```{r}
+#Create standardised scores and sort
+sort(scale(students$mg3))
+```
+
+
+Since all the values of the standardised score is under the range +3.29 and -3.29, we can easily conclude our data is normally distributed.
+
+
+## Inspect Final Portuguese Grade(pg3):
+```{r datadesc2}
+#Code chunks for data descriptions
+#numerical summary and histograms of Final Maths Grade
+#stat.desc is a function from pastecs 
+pastecs::stat.desc(students$pg3, basic=F)
+```
+
+```{r}
+#skewness and kurtosis from semTools with standard error
+tpskew<-semTools::skew(students$pg3)
+tpskew
+tpkurt<-semTools::kurtosis(students$pg3)
+tpkurt
+```
+
+```{r}
+#We divide the skew statistic by the standard error to get the standardised score
+tpskew[1]/tpskew[2]
+tpkurt[1]/tpkurt[2]
+```
+
+## Graph Final Portuguese Grade(pg3):
+```{r}
+#We will allocate the histogram to a variable to allow use to manipulate it
+gg <- ggplot(students, aes(x=students$pg3))
+
+#Change the label of the x axis
+gg <- gg + labs(x="Final Portuguese Grade")
+#manage binwidth and colours
+gg <- gg + geom_histogram(binwidth=2, colour="black", aes(y=..density.., fill=..count..))
+gg <- gg + scale_fill_gradient("Count", low="#DCDCDC", high="#7C7C7C")
+#adding a normal curve
+#use stat_function to compute a normalised score for each value of tpcois
+#pass the mean and standard deviation
+#use the na.rm parameter to say how missing values are handled
+gg <- gg + stat_function(fun=dnorm, color="red",args=list(mean=mean(students$pg3, na.rm=TRUE), sd=sd(students$pg3, na.rm=TRUE)))
+#to display the graph request the contents of the variable be shown
+gg
+```
+
+Through red line across the histogram,we can say the data is not symmetric and negatively skewed.
+
+```{r}
+#Create a qqplot
+qqnorm(students$pg3)
+qqline(students$pg3, col=2) #show a line on theplot
+```
+
+
+The dots are widely spread across the red line which represents skewed distribution.
+
+```{r}
+#Create standardised scores and sort
+sort(scale(students$pg3))
+```
+
+Though we have few values in the standardised score more than the range +3.25 and -3.25 yet we have more than 95% of the data which falls under the specified range.Hence we can conclude that data(pg3) is approaching normality.
+
+
+## Inspect School Absences in Portuguese(absences.p)
+```{r}
+pastecs::stat.desc(students$absences.p, basic=F)
+```
+
+```{r}
+#skewness and kurtosis from semTools with standard error
+tpskew<-semTools::skew(students$absences.p)
+tpkurt<-semTools::kurtosis(students$absences.p)
+tpskew
+tpkurt
+```
+
+```{r}
+#We divide the skew statistic by the standard error to get the standardised score
+tpskew[1]/tpskew[2]
+tpkurt[1]/tpkurt[2]
+```
+
+## GRAPH absences.p
+```{r}
+#We will allocate the histogram to a variable to allow use to manipulate it
+gg <- ggplot(students, aes(x=students$absences.p))
+
+#Change the label of the x axis
+gg <- gg + labs(x="Students absences")
+#manage binwidth and colours
+gg <- gg + geom_histogram(binwidth=2, colour="black", aes(y=..density.., fill=..count..))
+gg <- gg + scale_fill_gradient("Count", low="#DCDCDC", high="#7C7C7C")
+#adding a normal curve
+#use stat_function to compute a normalised score 
+#pass the mean and standard deviation
+#use the na.rm parameter to say how missing values are handled
+gg <- gg + stat_function(fun=dnorm, color="red",args=list(mean=mean(students$absences.p, na.rm=TRUE), sd=sd(students$pg3, na.rm=TRUE)))
+#to display the graph request the contents of the variable be shown
+gg
+```
+
+
+```{r}
+#Create a qqplot
+qqnorm(students$absences.p)
+qqline(students$absences.p, col=2) #show a line on theplot
+```
+
+```{r}
+#Sort the standardised scores 
+sort(scale(students$absences.p))
+```
+
+##Inspect Categorical Variable - Sex
+
+```{r}
+#Frequency Table
+summary(students$sex)
+```
+
+##Graph categories in Sex
+
+```{r}
+#Create a plot
+qplot(students$sex) + labs(x='Sex')
+```
+
+
+##Inspect Weekly Study Time 
+
+```{r}
+#Frequency Table
+summary(students$studytime.p)
+```
+
+##Graph categories in Weekly Study Time
+
+```{r}
+#Create a plot
+qplot(students$studytime.p) + labs(x='StudyTime')
+```
+
+##Inspect higher education for maths students 
+
+```{r}
+#Frequency Table
+summary(students$higher.m)
+```
+
+##Inspect higher education for maths students 
+
+```{r}
+#Frequency Table
+summary(students$medu)
+```
+
+##Graph categories in mother's education
+
+```{r}
+#Create a plot
+qplot(students$medu) + labs(x='Mother education')
+```
+
+
+## Correlation between student's Final Marks in Portuguese and Final Marks In Maths
+
+```{r}
+#### Scatterplot
+
+#Simple scatterplot of Final Maths Grade and Final Potuguese Grade
+#aes(x,y)
+scatter <- ggplot(students, aes(students$mg3,students$pg3))
+scatter + geom_point() + labs(x = "Final Maths Grade", y = "Final Portuguese Grade") 
+
+#Add a regression line
+scatter + geom_point() + geom_smooth(method = "lm", colour = "Red", se = F) + labs(x = "Final Maths Grade", y = "Final Portuguese Grade")
+```
+
+
+```{r}
+#### Conducting Correlation Test
+stats::cor.test(students$pg3, students$mg3, method='pearson')
+```
+
+
+## Correlation between student's Final Marks in Portuguese and Student Absences in Portuguese
+
+
+```{r}
+#### Scatterplot
+
+#Simple scatterplot of Final Portuguese Grade and Students Absences
+#aes(x,y)
+scatter <- ggplot(students, aes(students$pg3, students$absences.p))
+scatter + geom_point() + labs(x = "Final Portuguese Grade", y = "Students absences") 
+
+#Add a regression line
+scatter + geom_point() + geom_smooth(method = "lm", colour = "Red", se = F) + labs(x = "Final Portuguese Grade", y = "Students absences")
+```
+
+
+```{r}
+#### Conducting Correlation Test
+stats::cor.test(students$pg3, students$absences.p, method='pearson')
+```
+
+
+
+## Difference in means of final Portuguese grade for female and male category
+
+
+```{r}
+#Get descriptive stastitics by group
+#describeBy is part of the psych package so you need to use it
+
+psych::describeBy(students$pg3,group=students$sex)
+
+#Conduct Levene's test for homogeneity of variance in library car
+
+car::leveneTest(pg3~students$sex, data=students)
+
+#Resulting p-value under 0.05 means that variances are not equal 
+#Test is significant so we can't assume homogeneity of variance
+
+#Conducting the t-test
+t.test(pg3~students$sex, data=students)
+```
+
+
+```{r}
+#Calculating effect size - eta squared
+t=3.963
+etaSquared <- t^2/(t^2+(382-2))
+etaSquared
+```
+
+
+## Difference between means of final Portuguese grade for all the categories of Weekly study Time(Portuguese)
+
+```{r}
+#Code chunk for hypothesis 4
+#Check for homogeneity of variance
+#We use Bartlett's test 
+
+stats::bartlett.test(students$pg3, students$studytime.p)
+
+#Converting the integer type of study time to factors
+students[,'studytime.p']<-factor(students[,'studytime.p'])
+class(students$studytime.p)
+
+###ANOVA
+#Can be argued that the variances are homogeneous if the p-value > 0.05
+#Basic Approach
+#Compute the analysis of variance
+res.aov <- stats::aov(students$pg3 ~ students$studytime.p, data = students)
+#Summary of the analysis
+summary(res.aov)
+#Tukey pairwise comparison
+stats::TukeyHSD(res.aov)
+```
+
+```{r}
+#Calculating effect size
+etaSquared <- 324.1/2981.3
+etaSquared
+```
+
+
+## Creation Of Models 
+
+## Option A:
+# A1
+## Model 1 - Multiple Linear Regression
+
+
+```{r}
+#Recoding the categorical variable "Sex"
+students$sex=recode(students$sex,'M'='0','F'='1')
+```
+
+```{r}
+plot(pg3~mg3,students)
+plot(pg3~sex,students)
+
+```
+
+
+```{r}
+model1<-lm(students$pg3 ~ students$absences.p + students$mg3 + students$sex)
+anova(model1)
+```
+
+```{r}
+summary(model1)
+```
+
+
+```{r}
+stargazer(model1, type="text") #Tidy output of all the required stats
+```
+
+
+```{r}
+lm.beta(model1)
+```
+
+
+```{r}
+plot(model1)
+```
+
+## Check Assumptions for Model 1
+
+```{r}
+
+#Influential Outliers - Cook's distance
+cooksd<-sort(cooks.distance(model1))
+# plot Cook's distance
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  
+abline(h = 4*mean(cooksd, na.rm=T), col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")  # add labels
+```
+
+
+```{r}
+#find rows related to influential observations
+influential <- as.numeric(names(cooksd)[(cooksd > 4*mean(cooksd, na.rm=T))])  # influential row numbers
+stem(influential)
+```
+
+
+```{r}
+head(students[influential, ])  # influential observations.
+```
+
+```{r}
+car::outlierTest(model1) # Bonferonni p-value for most extreme obs - Are there any cases where the outcome variable has an unusual variable for its predictor values?
+```
+
+
+```{r}
+car::leveragePlots(model1)
+```
+
+
+
+```{r}
+#Create histogram and a density plot of the residuals
+plot(density(resid(model1))) 
+```
+
+
+```{r}
+#Create a QQ plot qPlot(model, main="QQ Plot") #qq plot for standardized resid 
+car::qqPlot(model1, main="QQ Plot Model 1", ylab='Standardized Residuals(model1)')
+```
+
+
+```{r}
+#Collinearity
+vifmodel<-car::vif(model1)
+vifmodel
+```
+
+```{r}
+#Tolerance
+1/vifmodel
+```
+
+
+## Model 2 - Multiple Linear Regression
+
+
+```{r}
+class(students$studytime.p)
+
+```
+
+```{r}
+
+model2<-lm(students$pg3 ~ students$mg3 + students$sex + students$studytime.p)
+anova(model2)
+```
+
+```{r}
+summary(model2)
+```
+
+
+```{r}
+stargazer(model2, type="text") #Tidy output of all the required stats
+```
+
+```{r}
+lm.beta(model2)
+```
+
+```{r}
+plot(model2)
+```
+
+## Check Assumptions for Model 2
+
+```{r}
+
+
+#Influential Outliers - Cook's distance
+cooksd<-sort(cooks.distance(model2))
+# plot Cook's distance
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  
+abline(h = 4*mean(cooksd, na.rm=T), col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")  # add labels
+```
+
+```{r}
+#find rows related to influential observations
+influential <- as.numeric(names(cooksd)[(cooksd > 4*mean(cooksd, na.rm=T))])  # influential row numbers
+stem(influential)
+```
+
+```{r}
+head(students[influential, ])  # influential observations.
+```
+
+```{r}
+car::outlierTest(model2) # Bonferonni p-value for most extreme obs - Are there any cases where the outcome variable has an unusual variable for its predictor values?
+```
+
+```{r}
+car::leveragePlots(model2) # leverage plots
+```
+
+
+```{r}
+#Create histogram and a density plot of the residuals
+plot(density(resid(model2))) 
+```
+
+
+```{r}
+#Create a QQ plot qPlot(model, main="QQ Plot") #qq plot for studentized resid 
+car::qqPlot(model2, main="QQ Plot Model 2", ylab='Standardized Residuals(model2)') 
+```
+
+
+```{r}
+#Collinearity
+vifmodel<-car::vif(model2)
+vifmodel
+```
+
+
+```{r}
+#Tolerance
+1/vifmodel
+```
+
+##Comparison between Model 1 and Model 2
+
+```{r}
+stargazer(model1, model2, type="text") #Quick model comparison
+```
+
+
+## A2 : Model 3 - Logistic Regression
+
+```{r}
+#names(students)
+#levels(students$medu)
+model3 <- glm(higher.m ~ sex + medu, data=students, family="binomial")
+```
+
+```{r}
+#Summary of the model with co-efficients
+stargazer(model3, type="text")
+```
+
+
+
+```{r}
+#Full summary of the model
+summary(model3)
+```
+
+```{r}
+#Chi-square plus significance
+lmtest::lrtest(model3)
+```
+
+
+
+```{r}
+#Pseudo Rsquared plus Chi-square of the model
+rcompanion::nagelkerke(model3,restrictNobs=TRUE)
+```
+
+
+```{r}
+#Exponentiate the co-efficients
+exp(coefficients(model3))
+```
+
+
+```{r}
+## odds ratios 
+cbind(Estimate=round(coef(model3),4),
+OR=round(exp(coef(model3)),4))
+```
+
+```{r}
+#medu - 0 indicates no education, 1 indicates primary education, 2 represents 5th to 9th grade, 3 represents secondary education and 4 indicates higher education
+#1. Probability of answering yes when female and mother had no degree
+arm::invlogit(coef(model3)[1]+ coef(model3)[2]*0)
+```
+
+
+```{r}
+#2. Probability of answering yes when male and mother had no degree
+arm::invlogit(coef(model3)[1]+ coef(model3)[2]*1)
+```
+
+```{r}
+#3. Probability of answering yes when female and mother had primary education
+arm::invlogit(coef(model3)[1]+ coef(model3)[2]*0 + coef(model3)[3]*1 + coef(model3)[4]*0 + coef(model3)[5]*0 + coef(model3)[6]*0)
+```
+
+```{r}
+#4. Probability of answering yes when male and mother had primary education
+arm::invlogit(coef(model3)[1]+ coef(model3)[2]*1 +  coef(model3)[3]*1 + coef(model3)[4]*0 + coef(model3)[5]*0 + coef(model3)[6]*0)
+```
+
+```{r}
+#5. Probability of answering yes when female and mother had education till 9th grade
+arm::invlogit(coef(model3)[1]+ coef(model3)[2]*0 + coef(model3)[3]*0 + coef(model3)[4]*1 + coef(model3)[5]*0 + coef(model3)[6]*0)
+```
+
+```{r}
+#6. Probability of answering yes when male and mother had education till 9th grade
+arm::invlogit(coef(model3)[1]+ coef(model3)[2]*1 + coef(model3)[3]*0 + coef(model3)[4]*1 + coef(model3)[5]*0 + coef(model3)[6]*0)
+```
+
+```{r}
+#7. Probability of answering yes when female and mother had secondary education
+arm::invlogit(coef(model3)[1]+ coef(model3)[2]*0 + coef(model3)[3]*0 + coef(model3)[4]*0 + coef(model3)[5]*1 + coef(model3)[6]*0)
+```
+
+```{r}
+#8. Probability of answering yes when male and mother had secondary education
+arm::invlogit(coef(model3)[1]+ coef(model3)[2]*1 + coef(model3)[3]*0 + coef(model3)[4]*0 + coef(model3)[5]*1 + coef(model3)[6]*0)
+```
+
+
+```{r}
+#9. Probability of answering yes when female and mother had higher education
+arm::invlogit(coef(model3)[1]+ coef(model3)[2]*0 + coef(model3)[3]*0 + coef(model3)[4]*0 + coef(model3)[5]*0 + coef(model3)[6]*1)
+```
+
+```{r}
+#10. Probability of answering yes when male and mother had higher education
+arm::invlogit(coef(model3)[1]+ coef(model3)[2]*1 + coef(model3)[3]*0 + coef(model3)[4]*0 + coef(model3)[5]*0 + coef(model3)[6]*1)
+```
+
+
+```{r}
+#Output the sensitivity, specificity, and ROC plot
+Epi::ROC(form=students$higher.m ~ students$sex + students$medu, plot="ROC")
+```
+```{r}
+library(generalhoslem)
+```
+
+
+## Check Assumptions for Model 3
+
+```{r}
+#Check the assumption of linearity of independent variables and log odds using a Hosmer-Lemeshow test, if this is not statistically significant we are ok
+generalhoslem::logitgof(students$higher.m, fitted(model3))
+```
+
+
+```{r}
+#Collinearity
+vifmodel<-car::vif(model3) # ignore any warnings, GVIF^(1/(2*Df)) is the value of interest
+vifmodel
+```
+
+
+```{r}
+#Tolerance
+1/vifmodel
+```
+
